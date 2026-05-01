@@ -406,6 +406,37 @@ code {
   font-size: 0.875em;
 }
 
+/* Prism / fenced code inside writeups — don’t flatten token colours */
+.writeup-body pre > code[class*="language-"] {
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.writeup-body pre[class*="language-"] {
+  margin: 1rem 0;
+}
+
+.writeup-body pre.writeup-trace {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.writeup-body pre.writeup-trace > code.writeup-trace {
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
 /* --- Footer --- */
 .footer {
   border-top: 1px solid var(--border);
@@ -750,6 +781,10 @@ code {
 
 /* --- Recent work rows --- */
 .work-row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 1.5rem 2rem;
+  align-items: start;
   border-top: 1px solid var(--border);
   padding: 2rem 0;
 }
@@ -937,6 +972,10 @@ code {
 
 @media (max-width: 768px) {
   .writeup-entry {
+    grid-template-columns: 1fr;
+  }
+
+  .work-row {
     grid-template-columns: 1fr;
   }
 
@@ -1205,6 +1244,38 @@ main.main.projects-main {
   height: auto;
   border: 1px solid var(--border);
   margin: 1.25rem 0;
+}
+
+.writeup-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  border: 1px solid var(--border);
+}
+
+.writeup-body th,
+.writeup-body td {
+  border: 1px solid var(--border);
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.writeup-body thead th {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.writeup-body tbody tr:nth-child(even) {
+  background: var(--surface);
 }
 
 @media (max-width: 768px) {

