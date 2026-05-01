@@ -1,306 +1,214 @@
-// Global JavaScript for Cybersecurity Portfolio
+/**
+ * Global JavaScript for Cyber Portfolio
+ */
 
-// Theme Management
-class ThemeManager {
-  constructor() {
-    this.theme = localStorage.getItem('theme') || 'dark';
-    this.init();
-  }
-
-  init() {
-    document.documentElement.setAttribute('data-theme', this.theme);
-    this.updateThemeIcon();
-  }
-
-  toggle() {
-    this.theme = this.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', this.theme);
-    localStorage.setItem('theme', this.theme);
-    this.updateThemeIcon();
-  }
-
-  updateThemeIcon() {
-    const themeToggle = document.querySelector('.theme-toggle');
-    if (themeToggle) {
-      themeToggle.innerHTML = this.theme === 'dark' ? 
-        '<i class="fas fa-sun"></i>' : 
-        '<i class="fas fa-moon"></i>';
-    }
-  }
+function typewriter(elementId, text, speed = 90, onDone) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = "";
+  const cursor = document.createElement("span");
+  cursor.className = "cursor-blink";
+  el.appendChild(cursor);
+  let i = 0;
+  const tick = () => {
+    if (i < text.length) {
+      el.insertBefore(document.createTextNode(text[i++]), cursor);
+      setTimeout(tick, speed);
+    } else if (onDone) onDone();
+  };
+  setTimeout(tick, 300);
 }
 
-// Mobile Menu Management
-class MobileMenu {
-  constructor() {
-    this.hamburger = document.querySelector('.hamburger');
-    this.mobileMenu = document.querySelector('.mobile-menu');
-    this.init();
-  }
+window.typewriter = typewriter;
 
-  init() {
-    if (this.hamburger && this.mobileMenu) {
-      this.hamburger.addEventListener('click', () => this.toggle());
-      
-      // Close menu when clicking on a link
-      const mobileLinks = this.mobileMenu.querySelectorAll('.mobile-nav-link');
-      mobileLinks.forEach(link => {
-        link.addEventListener('click', () => this.close());
-      });
+function initWriteupFilter() {
+  const bar = document.querySelector(".filter-bar");
+  const list = document.querySelector(".writeups-editorial");
+  if (!bar || !list) return;
 
-      // Close menu when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!this.hamburger.contains(e.target) && !this.mobileMenu.contains(e.target)) {
-          this.close();
-        }
-      });
-    }
-  }
+  const buttons = bar.querySelectorAll("[data-filter]");
+  const items = list.querySelectorAll("[data-category]");
 
-  toggle() {
-    this.hamburger.classList.toggle('active');
-    this.mobileMenu.classList.toggle('active');
-  }
+  if (buttons.length === 0 || items.length === 0) return;
 
-  close() {
-    this.hamburger.classList.remove('active');
-    this.mobileMenu.classList.remove('active');
-  }
-}
-
-// Mobile Side Panel Management
-class MobileSidePanel {
-  constructor() {
-    this.toggleButton = document.querySelector('.side-panel-toggle');
-    this.sidePanel = document.querySelector('.side-panel');
-    this.overlay = document.querySelector('.side-panel-overlay');
-    this.init();
-  }
-
-  init() {
-    if (this.toggleButton && this.sidePanel) {
-      this.toggleButton.addEventListener('click', () => this.toggle());
-      
-      // Close panel when clicking overlay
-      if (this.overlay) {
-        this.overlay.addEventListener('click', () => this.close());
-      }
-
-      // Close panel when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!this.toggleButton.contains(e.target) && 
-            !this.sidePanel.contains(e.target) && 
-            this.sidePanel.classList.contains('active')) {
-          this.close();
-        }
-      });
-
-      // Close panel on escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && this.sidePanel.classList.contains('active')) {
-          this.close();
-        }
-      });
-
-      // Initialize side panel dropdowns
-      this.initDropdowns();
-    }
-  }
-
-  initDropdowns() {
-    const sidePanelLinks = document.querySelectorAll('.side-panel-link');
-    
-    sidePanelLinks.forEach(link => {
-      link.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        // Close other open dropdowns
-        sidePanelLinks.forEach(l => {
-          if (l !== link) {
-            l.classList.remove('open');
-          }
-        });
-        
-        // Toggle current dropdown
-        link.classList.toggle('open');
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const cat = btn.dataset.filter;
+      items.forEach((item) => {
+        item.style.display =
+          cat === "all" || item.dataset.category === cat ? "" : "none";
       });
     });
+  });
+}
 
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.side-panel')) {
-        sidePanelLinks.forEach(link => {
-          link.classList.remove('open');
-        });
+const ThemeManager = {
+  init() {
+    const themeToggleBtn = document.querySelector(".theme-toggle");
+    const icon = themeToggleBtn ? themeToggleBtn.querySelector("i") : null;
+
+    if (!themeToggleBtn || !icon) return;
+
+    const currentTheme = localStorage.getItem("theme");
+    if (currentTheme) {
+      document.documentElement.setAttribute("data-theme", currentTheme);
+      if (currentTheme === "light") {
+        icon.classList.remove("fa-moon");
+        icon.classList.add("fa-sun");
+      }
+    }
+
+    themeToggleBtn.addEventListener("click", () => {
+      let targetTheme = "light";
+      const current = document.documentElement.getAttribute("data-theme");
+
+      if (current === "light") {
+        targetTheme = "dark";
+        icon.classList.remove("fa-sun");
+        icon.classList.add("fa-moon");
+      } else {
+        icon.classList.remove("fa-moon");
+        icon.classList.add("fa-sun");
+      }
+
+      document.documentElement.setAttribute("data-theme", targetTheme);
+      localStorage.setItem("theme", targetTheme);
+    });
+  },
+};
+
+const MobileMenu = {
+  init() {
+    const hamburger = document.querySelector(".hamburger");
+    const mobileMenu = document.querySelector(".mobile-menu");
+    const navLinks = document.querySelectorAll(".mobile-nav-link");
+    const closeBtn = document.querySelector(".mobile-menu-close");
+
+    if (!hamburger || !mobileMenu) return;
+
+    const openMenu = () => {
+      hamburger.classList.add("active");
+      mobileMenu.classList.add("active");
+      document.body.style.overflow = "hidden";
+    };
+
+    const closeMenu = () => {
+      hamburger.classList.remove("active");
+      mobileMenu.classList.remove("active");
+      document.body.style.overflow = "";
+    };
+
+    hamburger.addEventListener("click", () => {
+      if (mobileMenu.classList.contains("active")) {
+        closeMenu();
+      } else {
+        openMenu();
       }
     });
 
-    // Highlight active page in side panel
-    const currentPath = window.location.pathname;
-    const sidePanelDropdownLinks = document.querySelectorAll('.side-panel-dropdown a');
-    
-    sidePanelDropdownLinks.forEach(link => {
-      const href = link.getAttribute('href');
-      if (href && currentPath.includes(href.replace('./', ''))) {
-        link.classList.add('active');
-        // Open the parent dropdown
-        const parentLink = link.closest('.side-panel-dropdown').previousElementSibling;
-        if (parentLink) {
-          parentLink.classList.add('open');
-        }
-      }
+    if (closeBtn) {
+      closeBtn.addEventListener("click", closeMenu);
+    }
+
+    navLinks.forEach((link) => {
+      link.addEventListener("click", closeMenu);
     });
-  }
+  },
+};
 
-  toggle() {
-    this.sidePanel.classList.toggle('active');
-    this.toggleButton.classList.toggle('active');
-    if (this.overlay) {
-      this.overlay.classList.toggle('active');
-    }
-  }
-
-  close() {
-    this.sidePanel.classList.remove('active');
-    this.toggleButton.classList.remove('active');
-    if (this.overlay) {
-      this.overlay.classList.remove('active');
-    }
-  }
-}
-
-
-
-// Smooth Scrolling
-class SmoothScroll {
-  constructor() {
-    this.init();
-  }
-
+const SmoothScroll = {
   init() {
-    const links = document.querySelectorAll('a[href^="#"]');
-    links.forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const target = document.querySelector(link.getAttribute('href'));
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener("click", function (e) {
+        const targetId = this.getAttribute("href");
+        if (targetId === "#") return;
+
+        const target = document.querySelector(targetId);
         if (target) {
+          e.preventDefault();
           target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
+            behavior: "smooth",
+            block: "start",
           });
         }
       });
     });
-  }
-}
+  },
+};
 
-// Active Navigation Highlighting
-class NavigationHighlighter {
-  constructor() {
-    this.init();
-  }
-
+const NavigationHighlighter = {
   init() {
-    const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll('.nav-link, .mobile-nav-link');
-    
-    navLinks.forEach(link => {
-      const href = link.getAttribute('href');
-      if (href === currentPath || 
-          (currentPath.endsWith('/') && href === 'index.html') ||
-          (currentPath.includes('writeups') && href.includes('writeups')) ||
-          (currentPath.includes('projects') && href.includes('projects'))) {
-        link.classList.add('active');
+    const links = document.querySelectorAll(".nav-link, .mobile-nav-link");
+
+    links.forEach((link) => {
+      const href = link.getAttribute("href");
+      if (!href || href.startsWith("#")) return;
+      if (this.pathMatches(href)) {
+        link.classList.add("active");
       }
     });
-  }
-}
+  },
 
-// Fade In Animation
-class FadeInAnimation {
-  constructor() {
-    this.init();
-  }
-
-  init() {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('fade-in');
-        }
-      });
-    }, {
-      threshold: 0.1
-    });
-
-    const elements = document.querySelectorAll('.card, .hero-content, .project-card, .writeup-card');
-    elements.forEach(el => observer.observe(el));
-  }
-}
-
-// Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  // Initialize theme manager
-  const themeManager = new ThemeManager();
-  
-  // Add theme toggle event listener
-  const themeToggle = document.querySelector('.theme-toggle');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => themeManager.toggle());
-  }
-
-  // Initialize mobile menu
-  new MobileMenu();
-
-  // Initialize mobile side panel
-  new MobileSidePanel();
-
-
-  // Initialize smooth scrolling
-  new SmoothScroll();
-
-  // Initialize navigation highlighting
-  new NavigationHighlighter();
-
-  // Initialize fade in animations
-  new FadeInAnimation();
-
-  // Add fade-in class to body for initial animation
-  document.body.classList.add('fade-in');
-});
-
-// Handle page visibility changes
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    document.title = '👋 Come back! - Osezua';
-  } else {
-    document.title = document.title.replace('👋 Come back! - ', '');
-  }
-});
-
-// Add loading animation
-window.addEventListener('load', () => {
-  document.body.classList.add('loaded');
-});
-
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  // Ctrl/Cmd + K to toggle theme
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault();
-    const themeToggle = document.querySelector('.theme-toggle');
-    if (themeToggle) {
-      themeToggle.click();
+  pathMatches(href) {
+    let targetUrl;
+    try {
+      targetUrl = new URL(href, window.location.href);
+    } catch {
+      return false;
     }
-  }
-  
-  // Escape to close mobile menu
-  if (e.key === 'Escape') {
-    const mobileMenu = document.querySelector('.mobile-menu');
-    if (mobileMenu && mobileMenu.classList.contains('active')) {
-      const hamburger = document.querySelector('.hamburger');
-      if (hamburger) {
-        hamburger.click();
-      }
+
+    const here = new URL(window.location.href);
+    const targetPath = targetUrl.pathname;
+    const herePath = here.pathname;
+
+    if (targetPath === herePath) {
+      return true;
     }
-  }
-}); 
+
+    const targetFile = targetPath.split("/").filter(Boolean).pop() || "";
+    const hereParts = herePath.split("/").filter(Boolean);
+    const hereFile = hereParts.pop() || "";
+
+    if (targetFile && hereFile === targetFile) {
+      return true;
+    }
+
+    if (
+      targetFile === "writeups.html" &&
+      /\/writeups\//i.test(herePath) &&
+      hereFile !== "writeups.html"
+    ) {
+      return true;
+    }
+
+    if (
+      targetFile === "projects.html" &&
+      /\/projects\//i.test(herePath) &&
+      hereFile !== "projects.html"
+    ) {
+      return true;
+    }
+
+    if (targetFile === "index.html") {
+      if (/\/writeups\//i.test(herePath)) return false;
+      if (/\/projects\//i.test(herePath)) return false;
+      const isHome =
+        hereFile === "index.html" ||
+        hereFile === "" ||
+        herePath.endsWith("/");
+      return isHome;
+    }
+
+    return false;
+  },
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  ThemeManager.init();
+  MobileMenu.init();
+  SmoothScroll.init();
+  NavigationHighlighter.init();
+  initWriteupFilter();
+});

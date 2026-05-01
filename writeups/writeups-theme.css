@@ -1,380 +1,152 @@
-/* Writeups Theme - Specific styles for writeup pages */
-/* This file complements global.css and provides writeup-specific styling */
+/*
+ * Writeup page typography — load after ../global.css
+ * Uses design tokens from global.css (--font-*, --accent, etc.)
+ */
 
-/* Override some global styles for writeup pages */
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* Side Panel - Enhanced styling for writeup navigation */
-.side-panel {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 300px;
-  height: 100vh;
-  background: var(--bg-primary);
-  z-index: 5;
-  padding-top: 90px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  transition: var(--transition);
-  overflow-y: auto;
-}
-
-.side-panel-title {
-  color: var(--accent);
-  font-size: 1.18em;
-  font-weight: bold;
-  margin-bottom: 18px;
-  margin-left: 24px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 0.9em;
-  opacity: 0.8;
-}
-
-.side-panel-link {
-  color: var(--text-primary);
-  text-decoration: none;
-  font-size: 1em;
-  font-weight: 500;
-  padding: 12px 24px;
-  border-radius: 8px;
-  margin: 0 12px;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.side-panel-link:hover, 
-.side-panel-link.active {
-  background: var(--bg-tertiary);
-  color: var(--accent);
-  box-shadow: 0 0 12px var(--shadow);
-  border-color: var(--accent);
-}
-
-.side-panel-link i {
-  transition: var(--transition);
-}
-
-.side-panel-link.open i {
-  transform: rotate(180deg);
-}
-
-.side-panel-dropdown {
-  display: none;
-  flex-direction: column;
-  margin-left: 32px;
-  margin-top: 2px;
-  margin-bottom: 8px;
-  gap: 4px;
-  animation: slideDown 0.3s ease-out;
-}
-
-.side-panel-link.open + .side-panel-dropdown {
-  display: flex;
-}
-
-.side-panel-dropdown a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 0.95em;
-  padding: 8px 0 8px 16px;
-  border-radius: 6px;
-  transition: var(--transition);
-  cursor: pointer;
-  border-left: 2px solid transparent;
-}
-
-.side-panel-dropdown a:hover, 
-.side-panel-dropdown a.active {
-  background: var(--bg-tertiary);
-  color: var(--accent);
-  border-left-color: var(--accent);
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Writeup Content Layout */
-main.writeup-plain {
-  margin: 90px 0 60px 300px;
-  padding: 0 40px 40px 40px;
-  z-index: 2;
-  position: relative;
-  max-width: none;
-  width: calc(100vw - 300px);
-}
-
-/* Table of Contents Side Panel */
-.toc-side-panel {
-  position: fixed;
-  right: 0;
-  top: 90px;
-  width: 280px;
-  height: calc(100vh - 90px);
-  background: var(--bg-secondary);
-  border-left: 1px solid var(--border);
-  overflow-y: auto;
-  z-index: 100;
-  padding: 2rem 0;
-}
-
-.toc-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  padding: 0 2rem 1rem;
-  border-bottom: 1px solid var(--border);
+main.writeup-plain .writeup-header h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 1;
+  color: var(--text);
   margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
 }
 
-.toc-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+main.writeup-plain .writeup-meta {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
 }
 
-.toc-list li {
-  margin-bottom: 0.5rem;
-}
-
-.toc-list a {
-  display: block;
-  padding: 0.5rem 2rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-  border-left: 2px solid transparent;
-}
-
-.toc-list a:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-left-color: var(--accent);
-}
-
-/* Adjust main content when TOC is present */
-main.writeup-plain.with-toc {
-  width: calc(100vw - 580px); /* 300px for left panel + 280px for TOC */
-  margin-right: 280px;
-}
-
-/* Writeup Typography */
-main.writeup-plain h1 {
-  color: var(--accent);
-  font-size: 2.2em;
-  margin-bottom: 0.4em;
-  border-bottom: 2px solid var(--accent);
-  padding-bottom: 0.3em;
-  margin-top: 0;
+main.writeup-plain .writeup-content h1 {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: var(--text);
+  margin-top: 2rem;
+  margin-bottom: 0.65rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 main.writeup-plain h2 {
-  color: var(--accent);
-  font-size: 1.3em;
-  margin-bottom: 0.5em;
-  border-left: 4px solid var(--accent);
-  padding-left: 0.5em;
-  margin-top: 2em;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text);
+  margin-top: 2.25rem;
+  margin-bottom: 0.65rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 main.writeup-plain h3 {
-  color: var(--accent);
-  font-size: 1.1em;
-  margin-bottom: 0.5em;
-  margin-top: 1.5em;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
-main.writeup-plain p, 
+main.writeup-plain p,
 main.writeup-plain li {
-  color: var(--text-secondary);
-  font-size: 1.08em;
-  line-height: 1.7em;
-  margin-top: 0.7em;
-  margin-bottom: 0.7em;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin-top: 0.65rem;
+  margin-bottom: 0.65rem;
 }
 
 main.writeup-plain ul {
-  margin-left: 1.5em;
-  margin-bottom: 1.5em;
+  list-style: disc;
+  margin-left: 1.25rem;
+  margin-bottom: 1rem;
 }
 
-/* Writeup Images */
 main.writeup-plain img {
   display: block;
-  margin: 18px auto 24px auto;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px var(--shadow);
-  max-width: 95%;
-}
-
-/* Writeup Code Blocks */
-main.writeup-plain code, 
-main.writeup-plain pre {
-  background: var(--bg-tertiary);
-  color: var(--accent);
-  border-radius: 5px;
-  padding: 2px 6px;
-  font-size: 1em;
-  font-family: 'Fira Code', 'Consolas', monospace;
-}
-
-main.writeup-plain pre {
-  padding: 1rem;
-  margin: 1rem 0;
-  overflow-x: auto;
+  margin: 1.25rem auto;
+  max-width: 100%;
+  height: auto;
   border: 1px solid var(--border);
 }
 
-/* Success Banner */
-.pawnd {
-  background: linear-gradient(135deg, var(--accent), #1aff99);
-  color: var(--bg-primary);
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-weight: 700;
-  font-size: 1.1rem;
-  margin: 2rem 0;
-  text-align: center;
-  justify-content: center;
+main.writeup-plain pre {
+  font-family: var(--font-mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 
-/* Writeup Links */
+main.writeup-plain code,
+main.writeup-plain .inline-code {
+  font-family: var(--font-mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.35rem;
+  font-size: 0.875em;
+  color: var(--text);
+}
+
 main.writeup-plain a {
   color: var(--accent);
-  text-decoration: none;
-  transition: var(--transition);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 main.writeup-plain a:hover {
-  text-decoration: underline;
+  background: var(--accent-dim);
 }
 
-/* Step Indicators */
+.pawnd {
+  font-family: var(--font-mono);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  padding: 1rem 1.25rem;
+  margin: 2rem 0;
+  text-align: center;
+}
+
 .step {
-  background: var(--bg-secondary);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
   padding: 1rem;
   margin: 1rem 0;
 }
 
-/* Writeups List Grid */
 .writeups-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 2rem;
-  margin-top: 2rem;
+  display: block;
 }
 
-/* Responsive Design */
-@media (max-width: 900px) {
-  .side-panel { 
-    width: 100%;
-    height: auto;
-    position: relative;
-    border-bottom: 1px solid var(--border);
-    padding-top: 20px;
-    padding-bottom: 20px;
-    overflow-y: visible;
-  }
-  .side-panel-title { 
-    margin-left: 20px; 
-  }
-  .side-panel-link { 
-    margin: 0 16px;
-    padding: 12px 20px; 
-    font-size: 1em; 
-  }
-  .side-panel-dropdown { 
-    margin-left: 24px; 
-  }
-  main.writeup-plain { 
-    margin: 40px 0 60px 0; 
-    padding: 0 16px; 
-    width: 100%;
-  }
-  main.writeup-plain.with-toc {
-    width: 100%;
-    margin-right: 0;
-  }
-  .toc-side-panel {
-    display: none; /* Hide TOC on mobile */
-  }
-  .writeups-list {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 700px) {
-  .side-panel { 
-    width: 100%;
-    padding: 16px;
-  }
-  main.writeup-plain { 
-    margin: 20px 0 60px 0; 
-    padding: 0 16px; 
-    width: 100%;
-  }
-  main.writeup-plain.with-toc {
-    width: 100%;
-    margin-right: 0;
-  }
-  .toc-side-panel {
-    display: none; /* Hide TOC on mobile */
-  }
-  .writeups-list {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Footer Socials - Override global footer for writeup pages */
 .footer-socials {
-  width: 100vw;
-  background: var(--bg-secondary);
-  padding: 24px 0 18px 0;
-  text-align: center;
   border-top: 1px solid var(--border);
+  padding: 1.25rem 0;
+  text-align: center;
+  background: var(--bg);
 }
 
 .footer-socials a {
+  color: var(--muted);
+  font-size: 1.25rem;
+  margin: 0 0.75rem;
+}
+
+.footer-socials a:hover {
   color: var(--accent);
-  font-size: 2em;
-  margin: 0 18px;
-  transition: var(--transition);
-  text-decoration: none;
-  vertical-align: middle;
-}
-
-.footer-socials a:hover, 
-.footer-socials a:focus {
-  color: #1aff99;
-  transform: scale(1.15) rotate(-8deg);
-  outline: none;
-}
-
-@media (max-width: 900px) {
-  .footer-socials a {
-    font-size: 1.5em;
-    margin: 0 12px;
-  }
 }

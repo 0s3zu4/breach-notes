@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Writeup Title | Osezua</title>
+  <meta name="description" content="One-line summary for SEO and link previews.">
+
+  <!--
+    HOW TO ADD A NEW WRITEUP
+    1. Duplicate this file in writeups/ and rename it (use a short URL-safe name, e.g. My_Findings.html).
+    2. Register it on ../writeups.html: copy a writeup-entry block, set data-category to mobile | api | web | guides (lowercase),
+       update the number, title, description, and href to your new file.
+    3. Replace the hero title, metadata, and writeup-body content below.
+    4. Keep links to ../global.css and ../global.js. Optional: add writeups-theme.css after global.css for legacy prose tweaks.
+  -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="../global.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo">Osezua</a>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="../writeups.html" class="nav-link">Writeups</a>
+        <a href="../projects.html" class="nav-link">Projects</a>
+      </nav>
+
+      <div class="header-trailing">
+        <button type="button" class="theme-toggle" aria-label="Toggle theme">
+          <i class="fas fa-moon" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="hamburger" aria-label="Open menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu">
+    <button type="button" class="mobile-menu-close" aria-label="Close menu">
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+    <nav class="mobile-nav" aria-label="Mobile">
+      <a href="../index.html" class="mobile-nav-link">Home</a>
+      <a href="../writeups.html" class="mobile-nav-link">Writeups</a>
+      <a href="../projects.html" class="mobile-nav-link">Projects</a>
+    </nav>
+  </div>
+
+  <!-- Main article: use writeup-plain for legacy compatibility with existing subpages -->
+  <main class="writeup-plain">
+    <!-- Hero: replace title and meta values -->
+    <header class="writeup-hero">
+      <h1 class="writeup-hero-title">Writeup Title</h1>
+      <div class="writeup-hero-meta">
+        <span>Category: Mobile</span>
+        <span>Difficulty: Medium</span>
+        <span>Date: 2026-05-01</span>
+      </div>
+      <div class="writeup-hero-rule" aria-hidden="true"></div>
+    </header>
+
+    <!-- Content: use H2 for major sections, H3 for subsections -->
+    <div class="writeup-body">
+      <!-- Replace this paragraph with your lede: target, scope, and outcome. -->
+      <p>Replace this paragraph with a short introduction to the engagement or lab.</p>
+
+      <h2 id="overview">Overview</h2>
+      <p>Replace: what you tested and why it matters.</p>
+
+      <h2 id="environment">Environment</h2>
+      <p>Replace: tools, versions, and lab URLs.</p>
+      <pre><code># Example: commands belong in pre/code
+adb devices</code></pre>
+
+      <h2 id="findings">Findings</h2>
+      <h3 id="finding-1">Finding title</h3>
+      <p>Replace: description, impact, and reproduction steps.</p>
+      <!-- Images: paths relative to this file; CSS enforces max-width: 100% -->
+      <img src="../images/pp.jpeg" alt="Describe the screenshot or diagram">
+
+      <h2 id="remediation">Remediation</h2>
+      <p>Replace: fixes, references, and how you validated.</p>
+    </div>
+
+    <nav class="writeup-navigation" aria-label="Writeup">
+      <a href="../writeups.html" class="btn-secondary">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        Back to Writeups
+      </a>
+    </nav>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="social-links">
+        <a href="https://github.com/0s3zu4" target="_blank" rel="noopener noreferrer" class="social-link" title="GitHub">
+          <i class="fab fa-github" aria-hidden="true"></i>
+        </a>
+        <a href="https://www.linkedin.com/in/osezua-agboifoh/" target="_blank" rel="noopener noreferrer" class="social-link" title="LinkedIn">
+          <i class="fab fa-linkedin" aria-hidden="true"></i>
+        </a>
+        <a href="https://x.com/__zua" target="_blank" rel="noopener noreferrer" class="social-link" title="X (Twitter)">
+          <i class="fab fa-x-twitter" aria-hidden="true"></i>
+        </a>
+      </div>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <span class="footer-copy">&copy; 2026 Osezua. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../global.js"></script>
+</body>
+</html>
